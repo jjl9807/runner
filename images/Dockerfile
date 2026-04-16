@@ -8,6 +8,13 @@ ARG RUNNER_CONTAINER_HOOKS_VERSION=0.7.0
 ARG DOCKER_VERSION=29.3.1
 ARG BUILDX_VERSION=0.33.0
 
+RUN if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then \
+        sed -i 's|http://archive.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g; s|http://security.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources; \
+    fi \
+    && if [ -f /etc/apt/sources.list ]; then \
+        sed -i 's|http://archive.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g; s|http://security.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g' /etc/apt/sources.list; \
+    fi
+
 RUN apt update -y && apt install curl unzip -y
 
 WORKDIR /actions-runner
@@ -43,6 +50,13 @@ ENV RUNNER_MANUALLY_TRAP_SIG=1
 ENV ACTIONS_RUNNER_PRINT_LOG_TO_STDOUT=1
 ENV ImageOS=ubuntu24
 
+RUN if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then \
+        sed -i 's|http://archive.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g; s|http://security.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources; \
+    fi \
+    && if [ -f /etc/apt/sources.list ]; then \
+        sed -i 's|http://archive.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g; s|http://security.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g' /etc/apt/sources.list; \
+    fi
+
 # 'gpg-agent' and 'software-properties-common' are needed for the 'add-apt-repository' command that follows
 RUN apt update -y \
     && apt install -y --no-install-recommends sudo lsb-release gpg-agent software-properties-common curl jq unzip \
@@ -52,6 +66,12 @@ RUN apt update -y \
 RUN add-apt-repository ppa:git-core/ppa \
     && apt update -y \
     && apt install -y git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install system dependencies required by rk8s
+RUN apt update -y \
+    && apt install -y --no-install-recommends build-essential clang lld pkg-config protobuf-compiler zstd curl \
+    seccomp libseccomp-dev openssl libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN adduser --disabled-password --gecos "" --uid 1001 runner \
@@ -70,3 +90,14 @@ COPY --from=build /usr/local/lib/docker/cli-plugins/docker-buildx /usr/local/lib
 RUN install -o root -g root -m 755 docker/* /usr/bin/ && rm -rf docker
 
 USER runner
+
+# Setup Rust toolchain
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y --profile minimal --default-toolchain stable --no-modify-path
+
+ENV PATH=/home/runner/.cargo/bin:${PATH}
+
+RUN rustup component add rustfmt clippy
+
+# Install Buck2
+RUN curl -fsSL "https://github.com/facebook/buck2/releases/download/latest/buck2-x86_64-unknown-linux-musl.zst" | zstd -d -o "/home/runner/.cargo/bin/buck2" \
+    && chmod +x "/home/runner/.cargo/bin/buck2"
