@@ -9,10 +9,10 @@ ARG DOCKER_VERSION=29.3.1
 ARG BUILDX_VERSION=0.33.0
 
 RUN if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then \
-        sed -i 's|http://archive.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g; s|http://security.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources; \
+        sed -i 's|http://archive.ubuntu.com/ubuntu|https://mirror.nju.edu.cn/ubuntu|g; s|http://security.ubuntu.com/ubuntu|https://mirror.nju.edu.cn/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources; \
     fi \
     && if [ -f /etc/apt/sources.list ]; then \
-        sed -i 's|http://archive.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g; s|http://security.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g' /etc/apt/sources.list; \
+        sed -i 's|http://archive.ubuntu.com/ubuntu|https://mirror.nju.edu.cn/ubuntu|g; s|http://security.ubuntu.com/ubuntu|https://mirror.nju.edu.cn/ubuntu|g' /etc/apt/sources.list; \
     fi
 
 RUN apt update -y && apt install curl unzip -y
@@ -51,10 +51,10 @@ ENV ACTIONS_RUNNER_PRINT_LOG_TO_STDOUT=1
 ENV ImageOS=ubuntu24
 
 RUN if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then \
-        sed -i 's|http://archive.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g; s|http://security.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources; \
+        sed -i 's|http://archive.ubuntu.com/ubuntu|https://mirror.nju.edu.cn/ubuntu|g; s|http://security.ubuntu.com/ubuntu|https://mirror.nju.edu.cn/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources; \
     fi \
     && if [ -f /etc/apt/sources.list ]; then \
-        sed -i 's|http://archive.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g; s|http://security.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g' /etc/apt/sources.list; \
+        sed -i 's|http://archive.ubuntu.com/ubuntu|https://mirror.nju.edu.cn/ubuntu|g; s|http://security.ubuntu.com/ubuntu|https://mirror.nju.edu.cn/ubuntu|g' /etc/apt/sources.list; \
     fi
 
 # 'gpg-agent' and 'software-properties-common' are needed for the 'add-apt-repository' command that follows
@@ -71,7 +71,8 @@ RUN add-apt-repository ppa:git-core/ppa \
 # Install system dependencies required by rk8s
 RUN apt update -y \
     && apt install -y --no-install-recommends build-essential clang lld pkg-config protobuf-compiler zstd curl \
-    seccomp libseccomp-dev openssl libssl-dev \
+    seccomp libseccomp-dev libelf-dev openssl libssl-dev \
+    fio fuse3 libfuse3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN adduser --disabled-password --gecos "" --uid 1001 runner \
@@ -99,5 +100,5 @@ ENV PATH=/home/runner/.cargo/bin:${PATH}
 RUN rustup component add rustfmt clippy
 
 # Install Buck2
-RUN curl -fsSL "https://github.com/facebook/buck2/releases/download/latest/buck2-x86_64-unknown-linux-musl.zst" | zstd -d -o "/home/runner/.cargo/bin/buck2" \
+RUN curl -fsSL "https://github.com/facebook/buck2/releases/download/2026-04-15/buck2-x86_64-unknown-linux-musl.zst" | zstd -d -o "/home/runner/.cargo/bin/buck2" \
     && chmod +x "/home/runner/.cargo/bin/buck2"
