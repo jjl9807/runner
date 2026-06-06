@@ -8,6 +8,13 @@ ARG RUNNER_CONTAINER_HOOKS_VERSION=0.7.0
 ARG DOCKER_VERSION=29.5.0
 ARG BUILDX_VERSION=0.34.0
 
+RUN if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then \
+        sed -i 's|http://archive.ubuntu.com/ubuntu|https://mirror.nju.edu.cn/ubuntu|g; s|http://security.ubuntu.com/ubuntu|https://mirror.nju.edu.cn/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources; \
+    fi \
+    && if [ -f /etc/apt/sources.list ]; then \
+        sed -i 's|http://archive.ubuntu.com/ubuntu|https://mirror.nju.edu.cn/ubuntu|g; s|http://security.ubuntu.com/ubuntu|https://mirror.nju.edu.cn/ubuntu|g' /etc/apt/sources.list; \
+    fi
+
 RUN apt update -y && apt install curl unzip -y
 
 WORKDIR /actions-runner
@@ -43,6 +50,13 @@ ENV RUNNER_MANUALLY_TRAP_SIG=1
 ENV ACTIONS_RUNNER_PRINT_LOG_TO_STDOUT=1
 ENV ImageOS=ubuntu24
 
+RUN if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then \
+        sed -i 's|http://archive.ubuntu.com/ubuntu|https://mirror.nju.edu.cn/ubuntu|g; s|http://security.ubuntu.com/ubuntu|https://mirror.nju.edu.cn/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources; \
+    fi \
+    && if [ -f /etc/apt/sources.list ]; then \
+        sed -i 's|http://archive.ubuntu.com/ubuntu|https://mirror.nju.edu.cn/ubuntu|g; s|http://security.ubuntu.com/ubuntu|https://mirror.nju.edu.cn/ubuntu|g' /etc/apt/sources.list; \
+    fi
+
 # 'gpg-agent' and 'software-properties-common' are needed for the 'add-apt-repository' command that follows
 RUN apt update -y \
     && apt install -y --no-install-recommends sudo lsb-release gpg-agent software-properties-common curl jq unzip \
@@ -53,6 +67,23 @@ RUN add-apt-repository ppa:git-core/ppa \
     && apt update -y \
     && apt install -y git \
     && rm -rf /var/lib/apt/lists/*
+
+# Install system dependencies required by libra
+RUN apt update -y \
+    && apt install -y --no-install-recommends build-essential clang lld pkg-config zstd curl ripgrep \
+    seccomp libseccomp-dev openssl libssl-dev \
+    fio fuse3 libfuse3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install nodejs
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x -o nodesource_setup.sh \
+    && bash nodesource_setup.sh \
+    && apt install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Enable pnpm
+RUN npm install -g pnpm \
+    && npm cache clean --force
 
 RUN adduser --disabled-password --gecos "" --uid 1001 runner \
     && groupadd docker --gid 123 \
@@ -70,3 +101,10 @@ COPY --from=build /usr/local/lib/docker/cli-plugins/docker-buildx /usr/local/lib
 RUN install -o root -g root -m 755 docker/* /usr/bin/ && rm -rf docker
 
 USER runner
+
+# Setup Rust toolchain
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y --profile minimal --default-toolchain stable --no-modify-path
+
+ENV PATH=/home/runner/.cargo/bin:${PATH}
+
+RUN rustup component add rustfmt clippy
